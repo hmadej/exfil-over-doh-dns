@@ -1,2 +1,2 @@
-dnslib==0.9.14
+dnslib==0.9.17
 Flask==1.1.2
